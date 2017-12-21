@@ -97,7 +97,7 @@ if __name__ == '__main__':
     state = State(im, im2)
 
     best_overall_so_far = state
-    best_overall_error = rmsdiff(im, im2)
+    best_overall_error = error(im, im2)
     # Polygons in the image
     for a in range(100):
 
@@ -112,10 +112,10 @@ if __name__ == '__main__':
 
             if best_so_far is None:
                 best_so_far = ns
-                best_error = rmsdiff(im, im2)
+                best_error = error(im, im2)
                 continue
 
-            err = rmsdiff(im, im2)
+            err = error(im, im2)
             if err < best_error and err < best_overall_error:
                 best_so_far = ns
                 best_error = err
