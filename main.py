@@ -70,10 +70,10 @@ class State(object):
         # Ok just kidding
         mr = mg = mb = 0
 
-        self.imp.rectangle([(0, 0), (self.imp.im.size[0] - 1, self.imp.im.size[1] - 1)], (mr, mg, mb, 0x77))
+        self.imp.rectangle([(0, 0), (self.src.size[0] - 1, self.src.size[1] - 1)], (mr, mg, mb, 0x77))
         for (p1, p2) in self.rects:
-            mp = (clamp(0, (p1[0] + p2[0]) / 2, self.imp.im.size[0] - 1),
-                  clamp(0, (p1[1] + p2[1]) / 2, self.imp.im.size[1] - 1))
+            mp = (clamp(0, (p1[0] + p2[0]) / 2, self.src.size[0] - 1),
+                  clamp(0, (p1[1] + p2[1]) / 2, self.src.size[1] - 1))
 
             pix = self.src.getpixel(mp)
             p3 = (p1[0], p2[1])
@@ -93,9 +93,8 @@ if __name__ == '__main__':
     im = Image.open("../imgs/ddo.png")
 
     im2 = Image.new("RGB", (im.width, im.height))
-    im2d = ImageDraw.Draw(im2, "RGBA")
 
-    state = State(im, im2d)
+    state = State(im, im2)
 
     best_overall_so_far = state
     best_overall_error = rmsdiff(im, im2)
