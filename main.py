@@ -26,9 +26,9 @@ def error(im1, im2):
     h_g = hist[256:512]
     h_b = hist[512:]
 
-    err_r = sum(r * idx for idx, r in enumerate(h_r))
-    err_g = sum(g * idx for idx, g in enumerate(h_g))
-    err_b = sum(b * idx for idx, b in enumerate(h_b))
+    err_r = sum(r * (idx**2) for idx, r in enumerate(h_r)) / (float(im1.size[0]) * im1.size[1])
+    err_g = sum(g * (idx**2) for idx, g in enumerate(h_g)) / (float(im1.size[0]) * im1.size[1])
+    err_b = sum(b * (idx**2) for idx, b in enumerate(h_b)) / (float(im1.size[0]) * im1.size[1])
 
     return err_r + err_g + err_b
 
@@ -39,9 +39,11 @@ def clamp(low, x, up):
 
 
 class State(object):
-    def __init__(self, src, imp, rects=None):
-        self.imp = imp
+    def __init__(self, src, dst, rects=None):
         self.src = src
+        self.dst = dst
+        self.imp = ImageDraw.Draw(dst, "RGBA")
+
         if rects is None:
             self.rects = []
         else:
@@ -51,7 +53,7 @@ class State(object):
     def improve(self, r):
         nrects = copy.copy(self.rects)
         nrects.append(r)
-        return State(src=self.src, imp=self.imp, rects=nrects)
+        return State(src=self.src, dst=self.dst, rects=nrects)
 
     def render(self):
         # Clear
