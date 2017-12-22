@@ -26,9 +26,9 @@ def error(im1, im2):
     h_g = hist[256:512]
     h_b = hist[512:]
 
-    err_r = sum(r * (idx**2) for idx, r in enumerate(h_r)) / (float(im1.size[0]) * im1.size[1])
-    err_g = sum(g * (idx**2) for idx, g in enumerate(h_g)) / (float(im1.size[0]) * im1.size[1])
-    err_b = sum(b * (idx**2) for idx, b in enumerate(h_b)) / (float(im1.size[0]) * im1.size[1])
+    err_r = sum(r * (idx * idx) for idx, r in enumerate(h_r)) / (float(im1.size[0]) * im1.size[1])
+    err_g = sum(g * (idx * idx) for idx, g in enumerate(h_g)) / (float(im1.size[0]) * im1.size[1])
+    err_b = sum(b * (idx * idx) for idx, b in enumerate(h_b)) / (float(im1.size[0]) * im1.size[1])
 
     return err_r + err_g + err_b
 
@@ -50,10 +50,19 @@ class State(object):
             # Assume client provides a copy
             self.rects = rects
 
+            self.render()
+
     def improve(self, r):
+        # Copies the destination image, including its last rendering
+        ndst = copy.copy(self.dst)
+
         nrects = copy.copy(self.rects)
         nrects.append(r)
-        return State(src=self.src, dst=self.dst, rects=nrects)
+
+        return State(src=self.src, dst=ndst, rects=nrects)
+
+    def error(self):
+        return error(self.src, self.dst)
 
     def render(self):
         # Clear
@@ -68,10 +77,10 @@ class State(object):
         # mb = sum(b * idx for idx, b in enumerate(h_b)) / sum(h_b)
 
         # Ok just kidding
-        mr = mg = mb = 0
+        # mr = mg = mb = 0
 
-        self.imp.rectangle([(0, 0), (self.src.size[0] - 1, self.src.size[1] - 1)], (mr, mg, mb, 0x77))
-        for (p1, p2) in self.rects:
+        # self.imp.rectangle([(0, 0), (self.src.size[0] - 1, self.src.size[1] - 1)], (mr, mg, mb, 0x77))
+        for (p1, p2) in [self.rects[-1]]:
             mp = (clamp(0, (p1[0] + p2[0]) / 2, self.src.size[0] - 1),
                   clamp(0, (p1[1] + p2[1]) / 2, self.src.size[1] - 1))
 
@@ -97,7 +106,7 @@ if __name__ == '__main__':
     state = State(im, im2)
 
     best_overall_so_far = state
-    best_overall_error = error(im, im2)
+    best_overall_error = state.error()
     # Polygons in the image
     for a in range(100):
 
@@ -108,14 +117,13 @@ if __name__ == '__main__':
         for b in range(100):
 
             ns = best_overall_so_far.improve(randrect(im.size[0], im.size[1]))
-            ns.render()
 
             if best_so_far is None:
                 best_so_far = ns
-                best_error = error(im, im2)
+                best_error = ns.error()
                 continue
 
-            err = error(im, im2)
+            err = ns.error()
             if err < best_error and err < best_overall_error:
                 best_so_far = ns
                 best_error = err
@@ -123,7 +131,8 @@ if __name__ == '__main__':
         if best_error < best_overall_error:
             best_overall_error = best_error
             best_overall_so_far = best_so_far
-            im2.save("r.png")
             print "switch!", best_error, a
 
         print best_overall_error
+
+        best_overall_so_far.dst.save("tmp2.png")
