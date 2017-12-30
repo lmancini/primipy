@@ -1,6 +1,5 @@
 """Main primipy module."""
 
-import math
 import copy
 import random
 import sys
@@ -10,28 +9,18 @@ from PIL import ImageChops
 from PIL import ImageDraw
 
 
-def rmsdiff(im1, im2):
-    """Calculate the root-mean-square difference between two images."""
-    h = ImageChops.difference(im1, im2).histogram()
-
-    return math.sqrt(sum(h * (i**2) for i, h in enumerate(h))) / (float(im1.size[0]) * im1.size[1])
-
-
 def error(im1, im2):
     """Calculate the root-mean difference between two images."""
     im_i = ImageChops.difference(im1, im2)
 
     hist = im_i.histogram()
 
-    h_r = hist[:256]
-    h_g = hist[256:512]
-    h_b = hist[512:]
+    h = zip(hist[:256], hist[256:512], hist[512:])
+    area = float(im1.size[0]) * im1.size[1]
 
-    err_r = sum(r * (idx * idx) for idx, r in enumerate(h_r)) / (float(im1.size[0]) * im1.size[1])
-    err_g = sum(g * (idx * idx) for idx, g in enumerate(h_g)) / (float(im1.size[0]) * im1.size[1])
-    err_b = sum(b * (idx * idx) for idx, b in enumerate(h_b)) / (float(im1.size[0]) * im1.size[1])
+    err = sum((r + g + b) * (idx * idx) for idx, (r, g, b) in enumerate(h)) / area
 
-    return err_r + err_g + err_b
+    return err
 
 
 def clamp(low, x, up):
