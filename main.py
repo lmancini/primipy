@@ -3,6 +3,7 @@
 import math
 import copy
 import random
+import sys
 
 from PIL import Image
 from PIL import ImageChops
@@ -99,7 +100,7 @@ def randrect(maxw, maxh):
     return [(x - w / 2, y - h / 2), (x + w / 2, y + h / 2)]
 
 if __name__ == '__main__':
-    im = Image.open("../imgs/ddo.png")
+    im = Image.open(sys.argv[1]).convert("RGB")
 
     im2 = Image.new("RGB", (im.width, im.height))
 
