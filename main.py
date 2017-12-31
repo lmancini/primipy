@@ -1,8 +1,8 @@
 """Main primipy module."""
 
+import argparse
 import copy
 import random
-import sys
 
 from PIL import Image
 from PIL import ImageChops
@@ -114,7 +114,15 @@ class State(object):
 
 
 if __name__ == '__main__':
-    im = Image.open(sys.argv[1]).convert("RGB")
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-i", dest="input", help="input image", required=True)
+    parser.add_argument("-o", dest="output", help="output image", required=True)
+    parser.add_argument("-n", dest="nshapes", type=int, help="number of shapes", required=True)
+    parser.add_argument("-iters", dest="niters", type=int, help="number of iterations", default=100)
+
+    args = parser.parse_args()
+
+    im = Image.open(args.input).convert("RGB")
 
     im2 = Image.new("RGB", (im.width, im.height))
 
@@ -122,14 +130,14 @@ if __name__ == '__main__':
 
     best_overall_so_far = state
     best_overall_error = state.error()
-    # Polygons in the image
-    for a in range(100):
+    # Number of shapes in the image
+    for a in range(args.nshapes):
 
         best_so_far = None
         best_error = None
 
         # New polygons to try
-        for b in range(100):
+        for b in range(args.niters):
 
             ns = best_overall_so_far.improve()
 
@@ -150,4 +158,4 @@ if __name__ == '__main__':
 
         print best_overall_error
 
-        best_overall_so_far.dst.save("tmp2.png")
+        best_overall_so_far.dst.save(args.output)
