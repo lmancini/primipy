@@ -36,13 +36,51 @@ class State(object):
 
         if rects is None:
             self.rects = []
+            # The very first shape is a full-screen one with the most common
+            # color in the image
+
+            colors = {}
+            for y in xrange(src.size[1]):
+                for x in xrange(src.size[0]):
+                    col = src.getpixel((x, y))
+                    colors.setdefault(col, 0)
+                    colors[col] += 1
+
+            avg_col = max(colors, key=lambda key: colors[key])
+            r = ('r', ((0, 0), (self.src.size[0] - 1, self.src.size[1] - 1)), avg_col)
+            self.rects.append(r)
         else:
             # Assume client provides a copy
             self.rects = rects
 
-            self.render()
+        self.render()
 
-    def improve(self, r):
+    def randrect(self):
+        maxw = self.dst.size[0]
+        maxh = self.dst.size[1]
+
+        x, y = random.randint(0, maxw), random.randint(0, maxh)
+        w, h = random.randint(0, maxw), random.randint(0, maxh)
+
+        w /= 2
+        h /= 2
+
+        p1 = (x - w / 2, y - h / 2)
+        p2 = (x + w / 2, y + h / 2)
+        return ('r', (p1, p2), None)
+
+    def randtri(self):
+        maxw = self.dst.size[0]
+        maxh = self.dst.size[1]
+
+        x1, x2, x3 = random.randint(0, maxw), random.randint(0, maxw), random.randint(0, maxw)
+        y1, y2, y3 = random.randint(0, maxh), random.randint(0, maxh), random.randint(0, maxh)
+
+        return ('t', ((x1, y1), (x2, y2), (x3, y3)), None)
+
+    def improve(self):
+        r = self.randtri()
+
         # Copies the destination image, including its last rendering
         ndst = copy.copy(self.dst)
 
@@ -55,38 +93,25 @@ class State(object):
         return error(self.src, self.dst)
 
     def render(self):
-        # Clear
-        # hist = self.imp.im.histogram()
+        for (t, pts, c) in [self.rects[-1]]:
+            if c is None:
+                p1 = pts[0]
+                p2 = pts[1]
+                mp = (clamp(0, (p1[0] + p2[0]) / 2, self.src.size[0] - 1),
+                      clamp(0, (p1[1] + p2[1]) / 2, self.src.size[1] - 1))
 
-        # h_r = hist[:256]
-        # h_g = hist[256:512]
-        # h_b = hist[512:]
+                pix = self.src.getpixel(mp)
 
-        # mr = sum(r * idx for idx, r in enumerate(h_r)) / sum(h_r)
-        # mg = sum(g * idx for idx, g in enumerate(h_g)) / sum(h_g)
-        # mb = sum(b * idx for idx, b in enumerate(h_b)) / sum(h_b)
+                col = (pix[0], pix[1], pix[2], 0x77)
+            else:
+                col = c
 
-        # Ok just kidding
-        # mr = mg = mb = 0
+            if t == 't':
+                self.imp.polygon(pts, col)
+            else:
+                assert t == 'r'
+                self.imp.rectangle(pts, col)
 
-        # self.imp.rectangle([(0, 0), (self.src.size[0] - 1, self.src.size[1] - 1)], (mr, mg, mb, 0x77))
-        for (p1, p2) in [self.rects[-1]]:
-            mp = (clamp(0, (p1[0] + p2[0]) / 2, self.src.size[0] - 1),
-                  clamp(0, (p1[1] + p2[1]) / 2, self.src.size[1] - 1))
-
-            pix = self.src.getpixel(mp)
-            p3 = (p1[0], p2[1])
-            self.imp.polygon([p1, p2, p3], (pix[0], pix[1], pix[2], 0x77))
-
-
-def randrect(maxw, maxh):
-    x, y = random.randint(0, maxw), random.randint(0, maxh)
-    w, h = random.randint(0, maxw), random.randint(0, maxh)
-
-    w /= 2
-    h /= 2
-
-    return [(x - w / 2, y - h / 2), (x + w / 2, y + h / 2)]
 
 if __name__ == '__main__':
     im = Image.open(sys.argv[1]).convert("RGB")
@@ -106,7 +131,7 @@ if __name__ == '__main__':
         # New polygons to try
         for b in range(100):
 
-            ns = best_overall_so_far.improve(randrect(im.size[0], im.size[1]))
+            ns = best_overall_so_far.improve()
 
             if best_so_far is None:
                 best_so_far = ns
