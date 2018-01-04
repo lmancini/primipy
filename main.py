@@ -73,11 +73,17 @@ class State(object):
         return ('r', (p1, p2), None)
 
     def randtri(self):
+        """Draw a random triangle."""
         maxw = self.dst.size[0]
         maxh = self.dst.size[1]
+        mw = maxw / 4
+        mh = maxh / 4
 
-        x1, x2, x3 = random.randint(0, maxw), random.randint(0, maxw), random.randint(0, maxw)
-        y1, y2, y3 = random.randint(0, maxh), random.randint(0, maxh), random.randint(0, maxh)
+        cx, cy = random.randint(0, maxw), random.randint(0, maxh)
+
+        x1, y1 = cx + random.randint(-mw, mw), cy + random.randint(-mh, mh)
+        x2, y2 = cx + random.randint(-mw, mw), cy + random.randint(-mh, mh)
+        x3, y3 = cx + random.randint(-mw, mw), cy + random.randint(-mh, mh)
 
         return ('t', ((x1, y1), (x2, y2), (x3, y3)), None)
 
