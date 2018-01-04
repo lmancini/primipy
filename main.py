@@ -4,6 +4,7 @@ from __future__ import print_function
 
 import argparse
 import copy
+import os
 import random
 
 from PIL import Image
@@ -319,7 +320,7 @@ if __name__ == '__main__':
             best_overall_error = best_error
             best_overall_so_far = best_so_far
             if args.verbose:
-                print("Iter ", a, "Error improved to ", best_error)
+                print("Iter", a, "Error improved to", best_error)
 
         png_info = PngInfo()
         png_info.add_text("generator", "primipy")
@@ -328,4 +329,5 @@ if __name__ == '__main__':
 
         best_overall_so_far.dst.save(args.output, pnginfo=png_info)
 
-    best_overall_so_far.dump_to_svg("test.svg")
+    svg_filename = ".".join([os.path.splitext(args.output)[0], "svg"])
+    best_overall_so_far.dump_to_svg(svg_filename)
