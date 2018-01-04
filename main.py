@@ -11,6 +11,8 @@ from PIL import ImageChops
 from PIL import ImageDraw
 from PIL.PngImagePlugin import PngInfo
 
+import svgwrite
+
 
 def error(im1, im2):
     """Calculate the root-mean difference between two images."""
@@ -160,6 +162,39 @@ class State(object):
                 assert t == 'r'
                 self.imp.rectangle(pts, col)
 
+    def dump_to_svg(self, filename):
+
+        dwg = svgwrite.Drawing(filename=filename, profile="tiny")
+        dwg.viewbox(width=self.dst.size[0], height=self.dst.size[1])
+
+        for (t, pts, c) in self.rects:
+            if c is None:
+                p1 = pts[0]
+                p2 = pts[1]
+                mp = (clamp(0, (p1[0] + p2[0]) / 2, self.src.size[0] - 1),
+                      clamp(0, (p1[1] + p2[1]) / 2, self.src.size[1] - 1))
+
+                pix = self.src.getpixel(mp)
+
+                col = (pix[0], pix[1], pix[2], 0x77)
+            else:
+                col = c
+
+            if t == 't':
+                col_svg = svgwrite.rgb(r=col[0], g=col[1], b=col[2], mode="RGB")
+                polygon = dwg.polygon(points=pts,
+                     fill=col_svg, fill_opacity="0.5")
+                dwg.add(polygon)
+            else:
+                assert t == 'r'
+                p1, p2 = pts
+                col_svg = svgwrite.rgb(r=col[0], g=col[1], b=col[2], mode="RGB")
+                rect = dwg.rect(insert=p1, size=(p2[0] - p1[0], p2[1] - p1[1]), fill=col_svg,
+                                fill_opacity="0.5")
+                dwg.add(rect)
+
+        dwg.save()
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -212,3 +247,5 @@ if __name__ == '__main__':
         png_info.add_text("niters", str(args.niters))
 
         best_overall_so_far.dst.save(args.output, pnginfo=png_info)
+
+    best_overall_so_far.dump_to_svg("test.svg")
