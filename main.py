@@ -327,12 +327,15 @@ if __name__ == '__main__':
             if args.verbose:
                 print("Iter", a, "Error improved to", best_error)
 
-        png_info = PngInfo()
-        png_info.add_text("generator", "primipy")
-        png_info.add_text("nshapes", str(args.nshapes))
-        png_info.add_text("niters", str(args.niters))
+        best_overall_so_far.dst.save(args.output)
 
-        best_overall_so_far.dst.save(args.output, pnginfo=png_info)
+    # Save final PNG, with generator information
+    png_info = PngInfo()
+    png_info.add_text("generator", "primipy")
+    png_info.add_text("nshapes", str(args.nshapes))
+    png_info.add_text("niters", str(args.niters))
+    best_overall_so_far.dst.save(args.output, pnginfo=png_info)
 
+    # Save final SVG
     svg_filename = ".".join([os.path.splitext(args.output)[0], "svg"])
     best_overall_so_far.dump_to_svg(svg_filename)
