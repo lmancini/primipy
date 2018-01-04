@@ -32,7 +32,20 @@ def clamp(low, x, up):
 
 
 class State(object):
+    """State object."""
+
     def __init__(self, src, dst, rects=None):
+        """State constructor.
+
+        State instances are immutable and represent the state of the picture.
+
+        :param src: source image
+        :type src: PIL.Image
+        :param dst: destination image
+        :type dst: PIL.Image
+        :param rects: list of shapes rendered in destination image
+        :type rects: list(tuple)
+        """
         self.src = src
         self.dst = dst
         self.imp = ImageDraw.Draw(dst, "RGBA")
@@ -59,6 +72,7 @@ class State(object):
         self.render()
 
     def randrect(self):
+        """Draw a random rectangle."""
         maxw = self.dst.size[0]
         maxh = self.dst.size[1]
 
@@ -102,6 +116,11 @@ class State(object):
         return ('t', (p1, p2, p3), None)
 
     def improve(self):
+        """Add a random shape to shape list to create a new State.
+
+        :return: a new State instance
+        :rtype: State
+        """
         r = self.randtri()
 
         # Copies the destination image, including its last rendering
@@ -113,9 +132,15 @@ class State(object):
         return State(src=self.src, dst=ndst, rects=nrects)
 
     def error(self):
+        """Compute current error against source reference.
+
+        :return: error metric
+        :rtype: int
+        """
         return error(self.src, self.dst)
 
     def render(self):
+        """Render the current state of the shapes."""
         for (t, pts, c) in [self.rects[-1]]:
             if c is None:
                 p1 = pts[0]
