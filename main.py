@@ -86,7 +86,7 @@ class Triangle(Shape):
         """
         col_svg = svgwrite.rgb(r=col[0], g=col[1], b=col[2], mode="RGB")
         col_alpha = str(col[3] / 255.0)
-        polygon = dwg.polygon(points=self.pts, fill=col_svg, fill_opacity=col_alpha)
+        polygon = dwg.polygon(points=self.pts, fill=col_svg, fill_opacity=col_alpha, clip_path="url(#c)")
         dwg.add(polygon)
 
 
@@ -126,7 +126,7 @@ class Rectangle(Shape):
         col_svg = svgwrite.rgb(r=col[0], g=col[1], b=col[2], mode="RGB")
         col_alpha = str(col[3] / 255.0)
         rect = dwg.rect(insert=p1, size=(p2[0] - p1[0], p2[1] - p1[1]),
-                        fill=col_svg, fill_opacity=col_alpha)
+                        fill=col_svg, fill_opacity=col_alpha, clip_path="url(#c)")
         dwg.add(rect)
 
 
@@ -256,9 +256,14 @@ class State(object):
             shape.draw_pillow(self.imp, col)
 
     def dump_to_svg(self, filename):
-
-        dwg = svgwrite.Drawing(filename=filename, profile="tiny")
+        """Render the current state of the shapes using SVG."""
+        dwg = svgwrite.Drawing(filename=filename)
         dwg.viewbox(width=self.dst.size[0], height=self.dst.size[1])
+
+        # Add a clipping path to make sure the drawing is limited to the
+        # destination image canvas.
+        clip_path = dwg.defs.add(dwg.clipPath(id="c"))
+        clip_path.add(dwg.rect(insert=(0, 0), size=(self.dst.size[0], self.dst.size[1])))
 
         for shape in self.rects:
             c = shape.col
