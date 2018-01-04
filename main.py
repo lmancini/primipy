@@ -81,6 +81,20 @@ class State(object):
 
         return ('t', ((x1, y1), (x2, y2), (x3, y3)), None)
 
+    def bigtri(self):
+        """Draw a big sloped triangle shape."""
+        maxw = self.dst.size[0]
+        maxh = self.dst.size[1]
+
+        x, y = random.randint(0, maxw), random.randint(0, maxh)
+        w, h = random.randint(0, maxw), random.randint(0, maxh)
+
+        p1 = (x - w / 2, y - h / 2)
+        p2 = (x + w / 2, y + h / 2)
+        p3 = (p1[0], p2[1])
+
+        return ('t', (p1, p2, p3), None)
+
     def improve(self):
         r = self.randtri()
 
