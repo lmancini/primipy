@@ -33,6 +33,102 @@ def clamp(low, x, up):
     return min(max(low, x), up)
 
 
+class Shape(object):
+    """A generic shape, abstract class."""
+
+    def __init__(self, pts, col):
+        """Shape constructor.
+
+        :param src: source image
+        :type src: PIL.Image
+        """
+        self.pts = pts
+        self.col = col
+
+    def __str__(self):
+        """String-like representation for Shape."""
+        return str((self.__class__.__name__, self.pts, self.col))
+
+
+class Triangle(Shape):
+    """Triangle shape."""
+
+    def center(self):
+        """Calculate shape center.
+
+        :return: shape center
+        :rtype: tuple
+        """
+        p1 = self.pts[0]
+        p2 = self.pts[1]
+        p3 = self.pts[2]
+        mp = ((p1[0] + p2[0] + p3[0]) / 3, (p1[1] + p2[1] + p3[1]) / 3)
+        return mp
+
+    def draw_pillow(self, imp, col):
+        """Draw triangle on Pillow backend.
+
+        :param imp: Pillow image proxy
+        :type imp: ImageDraw.Draw
+        :param col: shape color RGBA tuple
+        :type col: tuple
+        """
+        imp.polygon(self.pts, col)
+
+    def draw_svg(self, dwg, col):
+        """Draw triangle on SVG backend.
+
+        :param dwg: SVG drawing context
+        :type dwg: svgwrite.Drawing
+        :param col: shape color RGBA tuple
+        :type col: tuple
+        """
+        col_svg = svgwrite.rgb(r=col[0], g=col[1], b=col[2], mode="RGB")
+        col_alpha = str(col[3] / 255.0)
+        polygon = dwg.polygon(points=self.pts, fill=col_svg, fill_opacity=col_alpha)
+        dwg.add(polygon)
+
+
+class Rectangle(Shape):
+    """Rectangle shape."""
+
+    def center(self):
+        """Calculate shape center.
+
+        :return: shape center
+        :rtype: tuple
+        """
+        p1 = self.pts[0]
+        p2 = self.pts[1]
+        mp = ((p1[0] + p2[0]) / 2, (p1[1] + p2[1]) / 2)
+        return mp
+
+    def draw_pillow(self, imp, col):
+        """Draw rectangle on Pillow backend.
+
+        :param imp: Pillow image proxy
+        :type imp: ImageDraw.Draw
+        :param col: shape color RGBA tuple
+        :type col: tuple
+        """
+        imp.rectangle(self.pts, col)
+
+    def draw_svg(self, dwg, col):
+        """Draw rectangle on SVG backend.
+
+        :param dwg: SVG drawing context
+        :type dwg: svgwrite.Drawing
+        :param col: shape color RGBA tuple
+        :type col: tuple
+        """
+        p1, p2 = self.pts
+        col_svg = svgwrite.rgb(r=col[0], g=col[1], b=col[2], mode="RGB")
+        col_alpha = str(col[3] / 255.0)
+        rect = dwg.rect(insert=p1, size=(p2[0] - p1[0], p2[1] - p1[1]),
+                        fill=col_svg, fill_opacity=col_alpha)
+        dwg.add(rect)
+
+
 class State(object):
     """State object."""
 
@@ -65,7 +161,8 @@ class State(object):
                     colors[col] += 1
 
             avg_col = max(colors, key=lambda key: colors[key])
-            r = ('r', ((0, 0), (self.src.size[0] - 1, self.src.size[1] - 1)), avg_col)
+            avg_col = (avg_col[0], avg_col[1], avg_col[2], 255)
+            r = Rectangle(pts=((0, 0), (self.src.size[0] - 1, self.src.size[1] - 1)), col=avg_col)
             self.rects.append(r)
         else:
             # Assume client provides a copy
@@ -74,7 +171,7 @@ class State(object):
         self.render()
 
     def randrect(self):
-        """Draw a random rectangle."""
+        """Generate a random rectangle."""
         maxw = self.dst.size[0]
         maxh = self.dst.size[1]
 
@@ -86,10 +183,10 @@ class State(object):
 
         p1 = (x - w / 2, y - h / 2)
         p2 = (x + w / 2, y + h / 2)
-        return ('r', (p1, p2), None)
+        return Rectangle(pts=(p1, p2), col=None)
 
     def randtri(self):
-        """Draw a random triangle."""
+        """Generate a random triangle."""
         maxw = self.dst.size[0]
         maxh = self.dst.size[1]
         mw = maxw / 4
@@ -101,10 +198,10 @@ class State(object):
         x2, y2 = cx + random.randint(-mw, mw), cy + random.randint(-mh, mh)
         x3, y3 = cx + random.randint(-mw, mw), cy + random.randint(-mh, mh)
 
-        return ('t', ((x1, y1), (x2, y2), (x3, y3)), None)
+        return Triangle(pts=((x1, y1), (x2, y2), (x3, y3)), col=None)
 
-    def bigtri(self):
-        """Draw a big sloped triangle shape."""
+    def slopedtri(self):
+        """Generate a sloped triangle shape."""
         maxw = self.dst.size[0]
         maxh = self.dst.size[1]
 
@@ -115,7 +212,7 @@ class State(object):
         p2 = (x + w / 2, y + h / 2)
         p3 = (p1[0], p2[1])
 
-        return ('t', (p1, p2, p3), None)
+        return Triangle(pts=(p1, p2, p3), col=None)
 
     def improve(self):
         """Add a random shape to shape list to create a new State.
@@ -143,12 +240,11 @@ class State(object):
 
     def render(self):
         """Render the current state of the shapes."""
-        for (t, pts, c) in [self.rects[-1]]:
+        for shape in [self.rects[-1]]:
+            c = shape.col
             if c is None:
-                p1 = pts[0]
-                p2 = pts[1]
-                mp = (clamp(0, (p1[0] + p2[0]) / 2, self.src.size[0] - 1),
-                      clamp(0, (p1[1] + p2[1]) / 2, self.src.size[1] - 1))
+                mp = shape.center()
+                mp = (clamp(0, mp[0], self.src.size[0] - 1), clamp(0, mp[1], self.src.size[1] - 1))
 
                 pix = self.src.getpixel(mp)
 
@@ -156,23 +252,18 @@ class State(object):
             else:
                 col = c
 
-            if t == 't':
-                self.imp.polygon(pts, col)
-            else:
-                assert t == 'r'
-                self.imp.rectangle(pts, col)
+            shape.draw_pillow(self.imp, col)
 
     def dump_to_svg(self, filename):
 
         dwg = svgwrite.Drawing(filename=filename, profile="tiny")
         dwg.viewbox(width=self.dst.size[0], height=self.dst.size[1])
 
-        for (t, pts, c) in self.rects:
+        for shape in self.rects:
+            c = shape.col
             if c is None:
-                p1 = pts[0]
-                p2 = pts[1]
-                mp = (clamp(0, (p1[0] + p2[0]) / 2, self.src.size[0] - 1),
-                      clamp(0, (p1[1] + p2[1]) / 2, self.src.size[1] - 1))
+                mp = shape.center()
+                mp = (clamp(0, mp[0], self.src.size[0] - 1), clamp(0, mp[1], self.src.size[1] - 1))
 
                 pix = self.src.getpixel(mp)
 
@@ -180,18 +271,7 @@ class State(object):
             else:
                 col = c
 
-            if t == 't':
-                col_svg = svgwrite.rgb(r=col[0], g=col[1], b=col[2], mode="RGB")
-                polygon = dwg.polygon(points=pts,
-                     fill=col_svg, fill_opacity="0.5")
-                dwg.add(polygon)
-            else:
-                assert t == 'r'
-                p1, p2 = pts
-                col_svg = svgwrite.rgb(r=col[0], g=col[1], b=col[2], mode="RGB")
-                rect = dwg.rect(insert=p1, size=(p2[0] - p1[0], p2[1] - p1[1]), fill=col_svg,
-                                fill_opacity="0.5")
-                dwg.add(rect)
+            shape.draw_svg(dwg, col)
 
         dwg.save()
 
