@@ -9,6 +9,7 @@ import random
 from PIL import Image
 from PIL import ImageChops
 from PIL import ImageDraw
+from PIL.PngImagePlugin import PngInfo
 
 
 def error(im1, im2):
@@ -160,4 +161,9 @@ if __name__ == '__main__':
             if args.verbose:
                 print("Iter ", a, "Error improved to ", best_error)
 
-        best_overall_so_far.dst.save(args.output)
+        png_info = PngInfo()
+        png_info.add_text("generator", "primipy")
+        png_info.add_text("nshapes", str(args.nshapes))
+        png_info.add_text("niters", str(args.niters))
+
+        best_overall_so_far.dst.save(args.output, pnginfo=png_info)
