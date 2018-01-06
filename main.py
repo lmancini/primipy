@@ -10,6 +10,7 @@ import random
 from PIL import Image
 from PIL import ImageChops
 from PIL import ImageDraw
+from PIL import ImageStat
 from PIL.PngImagePlugin import PngInfo
 
 import svgwrite
@@ -18,15 +19,7 @@ import svgwrite
 def error(im1, im2):
     """Calculate the root-mean difference between two images."""
     im_i = ImageChops.difference(im1, im2)
-
-    hist = im_i.histogram()
-
-    h = zip(hist[:256], hist[256:512], hist[512:])
-    area = float(im1.size[0]) * im1.size[1]
-
-    err = sum((r + g + b) * (idx * idx) for idx, (r, g, b) in enumerate(h)) / area
-
-    return err
+    return sum(ImageStat.Stat(im_i).rms)
 
 
 def clamp(low, x, up):
