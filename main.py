@@ -299,7 +299,7 @@ class State(object):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument("-v", "--verbose", help="print information to stdout", action="store_true")
+    parser.add_argument("-v", "--verbose", help="print information to stdout", action="count")
     parser.add_argument("-i", dest="input", help="input image", required=True)
     parser.add_argument("-o", dest="output", help="output image", required=True)
     parser.add_argument("-n", dest="nshapes", type=int, help="number of shapes", required=True)
@@ -340,7 +340,7 @@ if __name__ == '__main__':
         if best_error < best_overall_error:
             best_overall_error = best_error
             best_overall_so_far = best_so_far
-            if args.verbose:
+            if args.verbose > 0:
                 print("Iter", a, "Error improved to", best_error)
 
         best_overall_so_far.dst.save(args.output)
