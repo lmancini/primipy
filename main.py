@@ -49,6 +49,21 @@ def resize_to(im, dim):
     return im.resize((im_w, im_h))
 
 
+def dominant_color(im):
+    """Get dominant color in image.
+
+    :param im: source image
+    :type im: PIL.Image
+    :return: dominant color (RGBA)
+    :rtype: tuple
+    """
+    imp = im.convert("P", palette=Image.ADAPTIVE, colors=2)
+    imp.putalpha(255)
+    colors = imp.getcolors(2)
+    __, dominant_color = colors[0]
+    return dominant_color
+
+
 class Shape(object):
     """A generic shape, abstract class."""
 
@@ -166,19 +181,11 @@ class State(object):
 
         if rects is None:
             self.rects = []
-            # The very first shape is a full-screen one with the most common
+            # The very first shape is a full-screen one with the dominant
             # color in the image
+            dom_col = dominant_color(src)
 
-            colors = {}
-            for y in xrange(src.size[1]):
-                for x in xrange(src.size[0]):
-                    col = src.getpixel((x, y))
-                    colors.setdefault(col, 0)
-                    colors[col] += 1
-
-            avg_col = max(colors, key=lambda key: colors[key])
-            avg_col = (avg_col[0], avg_col[1], avg_col[2], 255)
-            r = Rectangle(pts=((0, 0), (self.src.size[0] - 1, self.src.size[1] - 1)), col=avg_col)
+            r = Rectangle(pts=((0, 0), (self.src.size[0] - 1, self.src.size[1] - 1)), col=dom_col)
             self.rects.append(r)
         else:
             # Assume client provides a copy
