@@ -1,6 +1,7 @@
 """Main primipy module."""
 
 from __future__ import print_function
+from __future__ import division
 
 import argparse
 import copy
@@ -25,6 +26,27 @@ def error(im1, im2):
 def clamp(low, x, up):
     """Clamp x between low and up."""
     return min(max(low, x), up)
+
+
+def resize_to(im, dim):
+    """Resize input image maintaining its aspect ratio.
+
+    :param im: source image
+    :type im: PIL.Image
+    :param dim: maximum dimension to resize to
+    :type dim: int
+    :return: resized image
+    :rtype: PIL.Image
+    """
+    im_ar = im.size[0] / im.size[1]
+    if im.size[0] > im.size[1]:
+        im_w = 256
+        im_h = int(256 / im_ar)
+    else:
+        im_w = int(256 * im_ar)
+        im_h = 256
+
+    return im.resize((im_w, im_h))
 
 
 class Shape(object):
@@ -286,6 +308,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     im = Image.open(args.input).convert("RGB")
+    im = resize_to(im, 256)
 
     im2 = Image.new("RGB", (im.width, im.height))
 
