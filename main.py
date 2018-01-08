@@ -96,6 +96,19 @@ class Triangle(Shape):
         mp = ((p1[0] + p2[0] + p3[0]) / 3, (p1[1] + p2[1] + p3[1]) / 3)
         return mp
 
+    def mutate(self):
+        """Mutate this Triangle.
+
+        :return: mutated Triangle
+        :rtype: Triangle
+        """
+        m_idx = random.randint(0, 2)
+        p = self.pts[m_idx]
+        np = (p[0] + random.randint(-16, 16), p[1] + random.randint(-16, 16))
+
+        n_pts = [self.pts[i] if i != m_idx else np for i in range(3)]
+        return Triangle(pts=n_pts, col=self.col)
+
     def draw_pillow(self, imp, col):
         """Draw triangle on Pillow backend.
 
@@ -134,6 +147,19 @@ class Rectangle(Shape):
         mp = ((p1[0] + p2[0]) / 2, (p1[1] + p2[1]) / 2)
         return mp
 
+    def mutate(self):
+        """Mutate this Rectangle.
+
+        :return: mutated Rectangle
+        :rtype: Rectangle
+        """
+        m_idx = random.randint(0, 1)
+        p = self.pts[m_idx]
+        np = (p[0] + random.randint(-16, 16), p[1] + random.randint(-16, 16))
+
+        n_pts = [self.pts[i] if i != m_idx else np for i in range(2)]
+        return Rectangle(pts=n_pts, col=self.col)
+
     def draw_pillow(self, imp, col):
         """Draw rectangle on Pillow backend.
 
@@ -163,7 +189,7 @@ class Rectangle(Shape):
 class State(object):
     """State object."""
 
-    def __init__(self, src, dst, rects=None):
+    def __init__(self, src, dst, rects=None, _mutation=None):
         """State constructor.
 
         State instances are immutable and represent the state of the picture.
@@ -174,10 +200,16 @@ class State(object):
         :type dst: PIL.Image
         :param rects: list of shapes rendered in destination image
         :type rects: list(tuple)
+        :param _mutation: None if this state is not a mutation
+                          False if this state just ceased being one
+                          True if this state is a mutation
+        :type _mutation: bool | None
         """
         self.src = src
         self.dst = dst
         self.imp = ImageDraw.Draw(dst, "RGBA")
+
+        self._mutation = _mutation
 
         if rects is None:
             self.rects = []
@@ -212,14 +244,13 @@ class State(object):
         """Generate a random triangle."""
         maxw = self.dst.size[0]
         maxh = self.dst.size[1]
-        mw = maxw / 4
-        mh = maxh / 4
 
-        cx, cy = random.randint(0, maxw), random.randint(0, maxh)
+        x1, y1 = random.randint(0, maxw), random.randint(0, maxh)
 
-        x1, y1 = cx + random.randint(-mw, mw), cy + random.randint(-mh, mh)
-        x2, y2 = cx + random.randint(-mw, mw), cy + random.randint(-mh, mh)
-        x3, y3 = cx + random.randint(-mw, mw), cy + random.randint(-mh, mh)
+        x2 = x1 + random.randint(0, 31) - 15
+        y2 = y1 + random.randint(0, 31) - 15
+        x3 = x1 + random.randint(0, 31) - 15
+        y3 = y1 + random.randint(0, 31) - 15
 
         return Triangle(pts=((x1, y1), (x2, y2), (x3, y3)), col=None)
 
@@ -253,6 +284,34 @@ class State(object):
 
         return State(src=self.src, dst=ndst, rects=nrects)
 
+    def mutate(self):
+        """Mutate the last shape to create a mutation of this State.
+
+        :return: mutated State instance
+        :rtype: State
+        """
+        mutated_shape = self.rects[-1].mutate()
+
+        # Copies the destination image, including its last rendering
+        ndst = copy.copy(self.dst)
+
+        nrects = copy.copy(self.rects)
+        nrects[-1] = mutated_shape
+
+        # Note: the new state is explicitly marked as mutation
+        return State(src=self.src, dst=ndst, rects=nrects, _mutation=True)
+
+    def finalize(self):
+        """Finalize the current state, ending the mutation.
+
+        :return: finalized State instance
+        :rtype: State
+        """
+        assert self._mutation is True
+        ndst = copy.copy(self.dst)
+        nrects = copy.copy(self.rects)
+        return State(src=self.src, dst=ndst, rects=nrects, _mutation=False)
+
     def error(self):
         """Compute current error against source reference.
 
@@ -262,8 +321,31 @@ class State(object):
         return error(self.src, self.dst)
 
     def render(self):
-        """Render the current state of the shapes."""
-        for shape in [self.rects[-1]]:
+        """Render the current state of the shapes.
+
+        Raster version
+        """
+        # If the current state was just finalized after a mutation, there's no
+        # need to draw anything: the destination picture is already a faithful
+        # representation. Drawing anything would actually pollute the picture,
+        # so we do an early exit.
+        if self._mutation is False:
+            return
+
+        # If the current state is not a mutation, this means we can get away
+        # with drawing only the last primitive - all the previous ones have
+        # already been drawn into the destination image.
+        if self._mutation is None:
+            shapes = [self.rects[-1]]
+
+        # Otherwise, we have to re-draw the whole state from scratch: if
+        # _mutation is True, it means that this state is a direct mutation
+        # of another one, so the image cache is invalid.
+        else:
+            assert self._mutation is True
+            shapes = self.rects
+
+        for shape in shapes:
             c = shape.col
             if c is None:
                 mp = shape.center()
@@ -271,14 +353,17 @@ class State(object):
 
                 pix = self.src.getpixel(mp)
 
-                col = (pix[0], pix[1], pix[2], 0x77)
+                col = (pix[0], pix[1], pix[2], 0x7F)
             else:
                 col = c
 
             shape.draw_pillow(self.imp, col)
 
     def dump_to_svg(self, filename):
-        """Render the current state of the shapes using SVG."""
+        """Render the current state of the shapes.
+
+        SVG version.
+        """
         dwg = svgwrite.Drawing(filename=filename)
         dwg.viewbox(width=self.dst.size[0], height=self.dst.size[1])
 
@@ -295,7 +380,7 @@ class State(object):
 
                 pix = self.src.getpixel(mp)
 
-                col = (pix[0], pix[1], pix[2], 0x77)
+                col = (pix[0], pix[1], pix[2], 0x7F)
             else:
                 col = c
 
@@ -349,6 +434,24 @@ if __name__ == '__main__':
             best_overall_so_far = best_so_far
             if args.verbose > 0:
                 print("Iter", a, "Error improved to", best_error)
+
+        # Also run mutations on the best shape
+        best_mutation_so_far = best_overall_so_far
+        best_mutation_error = best_overall_error
+
+        for m in range(100):
+
+            ns = best_mutation_so_far.mutate()
+            err = ns.error()
+            if err < best_mutation_error:
+                best_mutation_so_far = ns
+                best_mutation_error = err
+                if args.verbose > 1:
+                    print("Mutation", m, "Error improved to", best_mutation_error)
+
+        if best_mutation_error < best_overall_error:
+            best_overall_error = best_mutation_error
+            best_overall_so_far = best_mutation_so_far.finalize()
 
         best_overall_so_far.dst.save(args.output)
 
