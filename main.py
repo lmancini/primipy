@@ -1,3 +1,5 @@
+# -*- coding:utf-8 -*-
+
 """Main primipy module."""
 
 from __future__ import print_function
