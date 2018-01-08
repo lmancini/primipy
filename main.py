@@ -2,6 +2,10 @@
 
 """Main primipy module."""
 
+# TODO: while mutating, allow to keep the partial image until the mutated shape
+# FEATURE: refinement loop: change a shape with another one
+# FEATURE: resume optimization of a saved image
+
 from __future__ import print_function
 from __future__ import division
 
