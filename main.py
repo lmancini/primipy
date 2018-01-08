@@ -69,18 +69,31 @@ def dominant_color(im):
 class Shape(object):
     """A generic shape, abstract class."""
 
-    def __init__(self, pts, col):
+    def __init__(self, pts, col, _factor=1.0):
         """Shape constructor.
 
-        :param src: source image
-        :type src: PIL.Image
+        :param pts: shape points
+        :type pts: iterable
+        :param col: shape color; None if it should be fetched from image
+        :type col: tuple | None
+        :param _factor: scale factor to apply while drawing raster
+        :type _factor: float
         """
         self.pts = pts
         self.col = col
+        self._factor = _factor
 
     def __str__(self):
         """String-like representation for Shape."""
-        return str((self.__class__.__name__, self.pts, self.col))
+        return str((self.__class__.__name__, self.pts, self.col, self._factor))
+
+    def upscale(self, factor):
+        """Return an upscaled representation of this Shape.
+
+        :param factor: scaling factor
+        :type factor: float
+        """
+        return self.__class__(pts=self.pts, col=self.col, _factor=factor)
 
 
 class Triangle(Shape):
@@ -119,7 +132,11 @@ class Triangle(Shape):
         :param col: shape color RGBA tuple
         :type col: tuple
         """
-        imp.polygon(self.pts, col)
+        if self._factor != 1.0:
+            pts = [(p[0] * self._factor, p[1] * self._factor) for p in self.pts]
+        else:
+            pts = self.pts
+        imp.polygon(pts, col)
 
     def draw_svg(self, dwg, col):
         """Draw triangle on SVG backend.
@@ -170,7 +187,11 @@ class Rectangle(Shape):
         :param col: shape color RGBA tuple
         :type col: tuple
         """
-        imp.rectangle(self.pts, col)
+        if self._factor != 1.0:
+            pts = [(p[0] * self._factor, p[1] * self._factor) for p in self.pts]
+        else:
+            pts = self.pts
+        imp.rectangle(pts, col)
 
     def draw_svg(self, dwg, col):
         """Draw rectangle on SVG backend.
@@ -314,6 +335,22 @@ class State(object):
         nrects = copy.copy(self.rects)
         return State(src=self.src, dst=ndst, rects=nrects, _mutation=False)
 
+    def upscale(self, dst):
+        """Create an upscaled representation of this state.
+
+        :param dst: new destination image
+        :type dst: Image
+        :return: upscaled State instance
+        :rtype: State
+        """
+        # Assumes that the passed image has the same aspect ratio as the
+        # internal representation
+        factor = dst.size[0] / self.dst.size[0]
+        shapes = [shape.upscale(factor) for shape in self.rects]
+
+        # Abuses the mutation system to force a full redraw
+        return State(src=self.src, dst=dst, rects=shapes, _mutation=True)
+
     def error(self):
         """Compute current error against source reference.
 
@@ -402,6 +439,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     im = Image.open(args.input).convert("RGB")
+    orig_w, orig_h = im.size
     im = resize_to(im, 256)
 
     im2 = Image.new("RGB", (im.width, im.height))
@@ -457,12 +495,16 @@ if __name__ == '__main__':
 
         best_overall_so_far.dst.save(args.output)
 
+    # Upscale state to match original image's
+    im_final = Image.new("RGB", (orig_w, orig_h))
+    state_final = best_overall_so_far.upscale(im_final)
+
     # Save final PNG, with generator information
     png_info = PngInfo()
     png_info.add_text("generator", "primipy")
     png_info.add_text("nshapes", str(args.nshapes))
     png_info.add_text("niters", str(args.niters))
-    best_overall_so_far.dst.save(args.output, pnginfo=png_info)
+    state_final.dst.save(args.output, pnginfo=png_info)
 
     # Save final SVG
     svg_filename = ".".join([os.path.splitext(args.output)[0], "svg"])
