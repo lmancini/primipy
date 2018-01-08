@@ -6,7 +6,7 @@ Artistic reproduction of images with geometric shapes.
 
 ### What is it?
 
-Primipy is a command-line application that reads a reference images, and produces a set of geometric shapes that approximate the reference when drawn in sequence.
+Primipy is a command-line application that reads a reference image, and produces a set of geometric shapes that approximate the reference when drawn in sequence.
 
 The algorithm adds one shape at a time. Each one goes through randomization and optimization steps. In detail:
 
@@ -19,7 +19,7 @@ Install Python 2.x, then
 
 ```
 pip install -r requirements.txt
-python main.py -i <your_reference_image> -o <output file>
+python main.py -i <your_reference_image> -o <output file> -n 200 -v
 ```
 
 A SVG with vector shapes will be produced in the same directory of the output file.
