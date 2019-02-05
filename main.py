@@ -22,6 +22,10 @@ from PIL.PngImagePlugin import PngInfo
 
 import svgwrite
 
+# GIF
+from imageio import mimwrite
+from numpy import asarray
+
 
 def error(im1, im2):
     """Calculate the root-mean difference between two images."""
@@ -439,7 +443,7 @@ if __name__ == '__main__':
     parser.add_argument("-o", dest="output", help="output image", required=True)
     parser.add_argument("-n", dest="nshapes", type=int, help="number of shapes", required=True)
     parser.add_argument("-iters", dest="niters", type=int, help="number of iterations", default=100)
-
+    parser.add_argument("-a", dest="animation", action="store_true", help="save animation", default=False)
     args = parser.parse_args()
 
     im = Image.open(args.input).convert("RGB")
@@ -452,6 +456,10 @@ if __name__ == '__main__':
 
     best_overall_so_far = state
     best_overall_error = state.error()
+
+    # Animation frames
+    frames = []
+
     # Number of shapes in the image
     for a in range(args.nshapes):
 
@@ -498,6 +506,9 @@ if __name__ == '__main__':
             best_overall_so_far = best_mutation_so_far.finalize()
 
         best_overall_so_far.dst.save(args.output)
+        if args.animation and not a % 5:
+            # Add a frame every 5 iterations
+            frames.append(asarray(best_overall_so_far.dst))
 
     # Upscale state to match original image's
     im_final = Image.new("RGB", (orig_w, orig_h))
@@ -513,3 +524,8 @@ if __name__ == '__main__':
     # Save final SVG
     svg_filename = ".".join([os.path.splitext(args.output)[0], "svg"])
     best_overall_so_far.dump_to_svg(svg_filename)
+
+    if args.animation:
+        # Export frames into an animated GIF
+        gif_filename = ".".join([os.path.splitext(args.output)[0], "gif"])
+        mimwrite(gif_filename, frames)
