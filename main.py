@@ -63,11 +63,9 @@ def dominant_color(im):
     :return: dominant color (RGBA)
     :rtype: tuple
     """
-    imp = im.convert("P", palette=Image.ADAPTIVE, colors=2)
-    imp.putalpha(255)
-    colors = imp.getcolors(2)
-    __, dominant_color = colors[0]
-    return dominant_color
+    imp = im.convert("P", palette=Image.ADAPTIVE, colors=1)
+    dominant_color = imp.getpalette()[:3] + [255]
+    return tuple(dominant_color)
 
 
 class Shape(object):
@@ -476,7 +474,7 @@ if __name__ == '__main__':
         if best_error < best_overall_error:
             best_overall_error = best_error
             best_overall_so_far = best_so_far
-            if args.verbose > 0:
+            if args.verbose is not None and args.verbose > 0:
                 print("Iter", a, "Error improved to", best_error)
 
         # Also run mutations on the best shape
@@ -490,7 +488,7 @@ if __name__ == '__main__':
             if err < best_mutation_error:
                 best_mutation_so_far = ns
                 best_mutation_error = err
-                if args.verbose > 1:
+                if args.verbose is not None and args.verbose > 1:
                     print("Mutation", m, "Error improved to", best_mutation_error)
 
         if best_mutation_error < best_overall_error:

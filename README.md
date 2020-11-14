@@ -15,7 +15,7 @@ The algorithm adds one shape at a time. Each one goes through randomization and 
 
 ### Usage
 
-Install Python 2.x, then
+Install Python 3.x, then
 
 ```
 pip install -r requirements.txt

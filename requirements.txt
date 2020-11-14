@@ -1,2 +1,2 @@
-Pillow==4.3.0
-svgwrite==1.1.12
+Pillow==8.0.1
+svgwrite==1.4
